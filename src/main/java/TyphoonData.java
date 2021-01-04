@@ -88,7 +88,6 @@ public class TyphoonData {
         typhoonPicture = new JSONObject();
         typhoonPicture.put(typhoonID, allPicture);
 
-        System.out.println(typhoonPicture.toString());
 
         //颱風資料
         //簡介
