@@ -2,11 +2,16 @@ public class test {
     public static void main(String[] args) {
         String html = "''+    '<div class=\"panel panel-default\">'+        '<div class=\"panel-heading\">'+            '<h4 class=\"panel-title\">'+                '<a class=\"accordion-toggle\" data-toggle=\"collapse\" data-parent=\"#accordion-1\" href=\"#collapse-A1\" title=\"點此展開\" aria-expanded=\"true\">'+                    '<span class=\"fa-red\">熱帶性低氣壓</span><span class=\"fa-blue\">TD26</span><br>(原科羅旺颱風)'+                '</a>'+            '</h4>'+        '</div>'+        '<div id=\"collapse-A1\" class=\"panel-collapse collapse in\" aria-expanded=\"true\" role=\"document\">'+            '<div class=\"panel-body\">'+                '<p>21日14時的中心位置在北緯 9.0 度，東經 112.5 度，以每小時18公里速度，向西南西進行。<span class=\"fa-blue\">中心氣壓</span><span class=\"fa-red\">1004</span><span class=\"fa-blue\">百帕</span>，<span class=\"fa-blue\">近中心最大風速每秒</span><span class=\"fa-red\">15</span><span class=\"fa-blue\">公尺</span>，瞬間最大陣風每秒 23 公尺。</p>'+            '</div>'+        '</div>'+    '</div>'";
         html = html.replace("  ", "").replace("'", "").replace("+", "");
-        System.out.println(html);
 
-        String testHTML = "<div class=\"abc\" id='root'><div class=\"def\"></div></div>";
+        String testHTML = "<div class=\"abc\" id=\"root\"><span>hello</span><div id='window' class=\"def\"></div></div>";
+        System.out.println(html);
+        findHtmlTagEnd(html);
 //        System.out.println(getTextInQuotation(testHTML.substring(testHTML.indexOf("class"))));
 //        System.out.println(getTextInQuotation(testHTML));
+
+
+        if (1 > 0)
+            return;
 
         int nowIndex = 0;
 
@@ -16,10 +21,12 @@ public class test {
 
         int lastQuotationEnd = nowIndex;
         while (true) {
+            int htmlTagEnd = testHTML.indexOf(">", lastQuotationEnd);
+
             //尋找引號裡的值與key
             int quotationPos = testHTML.indexOf("\"", nowIndex);
             char firstQuotation = '\"';
-            if (quotationPos == -1 || testHTML.indexOf(">", lastQuotationEnd) < quotationPos) {//不是雙引號||超過html tag結束
+            if (quotationPos == -1 || htmlTagEnd < quotationPos) {//不是雙引號||超過html tag結束
                 quotationPos = testHTML.indexOf("'", nowIndex);
                 if (quotationPos != -1)//是單引號
                     firstQuotation = '\'';
@@ -29,7 +36,7 @@ public class test {
 
 
             int quotationEnd = testHTML.indexOf(firstQuotation, quotationPos + 1);
-            if (testHTML.indexOf(">", lastQuotationEnd) < quotationEnd)//超過tag了
+            if (quotationEnd > htmlTagEnd)//超過tag了
                 break;
 
             String value = testHTML.substring(quotationPos + 1, quotationEnd);
@@ -43,22 +50,75 @@ public class test {
             lastQuotationEnd = quotationEnd;
             nowIndex = quotationEnd + 1;
         }
-
-
     }
 
-    private static String getInnerHTML(String in) {
-        return "";
-    }
+    private static void findHtmlTagEnd(String html) {
+        boolean inStr = false;
+        char firstQuotation = ' ';
+        int htmlTagStart = -1;
+        int htmlTagEnd = -1;
+        int htmlAttributeStart = -1;
+        int htmlAttributeEnd = -1;
+        int lastAttributeEnd = -1;
+        int equalPos = -1;
+        String htmlTag = null;
+        for (int i = 0; i < html.length(); i++) {
+            //找到開頭
+            if (html.charAt(i) == '<')
+                htmlTagStart = i;
 
-    private static String getTextInQuotation(String in) {
-        int classIndex = in.indexOf("class") + 5;
-        int idIndex = in.indexOf("id") + 2;
-        if (classIndex > -1)
-            in = in.substring(classIndex);
+            //找到html tag
+            if (html.charAt(i) == ' ' && htmlTagStart != -1 && !inStr && htmlTag == null) {
+                htmlTag = html.substring(htmlTagStart + 1, i);
+                htmlAttributeEnd = i;
+            }
 
+            //找到結束
+            if (html.charAt(i) == '>' && htmlTagStart != -1 && !inStr) {
+                htmlTagEnd = i;
+                //那個html tag沒有Attribute
+                if (htmlTag == null)
+                    htmlTag = html.substring(htmlTagStart + 1, i);
 
-        return in;
+                int htmlTagCloseTagPos = html.lastIndexOf("</" + htmlTag + ">");
+                int thisInnerHtmlLength = (htmlTagCloseTagPos + htmlTag.length() + 3);
+                System.out.println("tag= " + htmlTag);
+                System.out.println("inner html= " + html.substring(htmlTagEnd + 1, htmlTagCloseTagPos));
+                System.out.println("");
+
+                //如果有分岔
+                if (thisInnerHtmlLength < html.length()) {
+                    findHtmlTagEnd(html.substring(thisInnerHtmlLength));
+                }
+                //找結束
+                findHtmlTagEnd(html.substring(htmlTagEnd + 1, htmlTagCloseTagPos));
+                break;
+            }
+
+            //找到key
+            if (html.charAt(i) == '=' && !inStr) {
+                equalPos = i;
+                lastAttributeEnd = htmlAttributeEnd;
+            }
+
+            //有找到開頭了且還沒找到字串開頭
+            if (htmlTagStart != -1 && !inStr)
+                if (html.charAt(i) == '\'' || html.charAt(i) == '\"' || html.charAt(i) == '`') {//找到字串
+                    firstQuotation = html.charAt(i);
+                    htmlAttributeStart = i;
+                    inStr = true;
+                }
+
+            //找到字串結束
+            if (html.charAt(i) == firstQuotation && inStr && htmlAttributeStart != i) {
+                htmlAttributeEnd = i;
+                inStr = false;
+                System.out.print(html.substring(lastAttributeEnd + 1, equalPos).replace(" ", "") + "= ");
+                System.out.println(html.substring(htmlAttributeStart + 1, htmlAttributeEnd));
+            }
+
+        }
+//        System.out.println(htmlTagStart + " " + htmlTagEnd);
     }
 
     private static String findText(String in) {
