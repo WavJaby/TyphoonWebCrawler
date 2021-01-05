@@ -7,7 +7,6 @@ public class test {
         String testHTML = "<div class=\"abc\" id='root'><div class=\"def\"></div></div>";
 //        System.out.println(getTextInQuotation(testHTML.substring(testHTML.indexOf("class"))));
 //        System.out.println(getTextInQuotation(testHTML));
-//        System.out.println(findText(html));
 
         int nowIndex = 0;
 
@@ -20,13 +19,15 @@ public class test {
             //尋找引號裡的值與key
             int quotationPos = testHTML.indexOf("\"", nowIndex);
             char firstQuotation = '\"';
-            if (quotationPos == -1) {//不是雙引號
+            if (quotationPos == -1 || testHTML.indexOf(">", lastQuotationEnd) < quotationPos) {//不是雙引號||超過html tag結束
                 quotationPos = testHTML.indexOf("'", nowIndex);
                 if (quotationPos != -1)//是單引號
                     firstQuotation = '\'';
                 else //沒找到引號
                     return;
             }
+
+
             int quotationEnd = testHTML.indexOf(firstQuotation, quotationPos + 1);
             if (testHTML.indexOf(">", lastQuotationEnd) < quotationEnd)//超過tag了
                 break;
@@ -40,7 +41,7 @@ public class test {
             System.out.println(value);
 
             lastQuotationEnd = quotationEnd;
-            nowIndex = quotationEnd;
+            nowIndex = quotationEnd + 1;
         }
 
 
