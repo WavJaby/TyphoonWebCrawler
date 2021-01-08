@@ -36,7 +36,7 @@ public class TyphoonData {
         //颱風名字
         typhoonName = (JSONObject) ((JSONObject) tyInfo.get(typhoonID)).get("Name");
         //時間
-        typhoonTime = new JSONObject(getJsValue(mainData, "TYPHOON"));
+        typhoonTime = new JSONObject(getJsValue(mainData, "TY_TIME"));
 
         //暴風圈侵襲機率圖片資料
         String wspMap = getWebHtml("https://www.cwb.gov.tw/Data/typhoon/TY_NEWS/WSP-MAP_IMGS_" + dataTime + "_zhtw.json", head);
