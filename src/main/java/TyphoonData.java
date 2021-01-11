@@ -2,11 +2,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import javax.swing.*;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.Element;
-import javax.swing.text.ElementIterator;
-import javax.swing.text.html.HTMLDocument;
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
@@ -95,20 +91,22 @@ public class TyphoonData {
         //詳細資料
         String tyData2 = getJsValue(mainData, "TY_LIST_2['C']");
 
-        //解析HTML
-        JEditorPane jEditorPane = new JEditorPane();
-        jEditorPane.setContentType("text/html; charset=utf-8");
-        jEditorPane.setText(tyData1.replace("+", "").replace("'", "").replace("  ", "") + tyData2.replace("+", "").replace("'", "").replace("  ", ""));
-        HTMLDocument document = (HTMLDocument) jEditorPane.getDocument();
+        getHtmlText("<span class=\"aaa\">Hello</span>", null);
+
+//        //解析HTML
+//        JEditorPane jEditorPane = new JEditorPane();
+//        jEditorPane.setContentType("text/html; charset=utf-8");
+//        jEditorPane.setText(tyData1.replace("+", "").replace("'", "").replace("  ", "") + tyData2.replace("+", "").replace("'", "").replace("  ", ""));
+//        HTMLDocument document = (HTMLDocument) jEditorPane.getDocument();
+////        ElementIterator iterator = new ElementIterator(document);
 //        ElementIterator iterator = new ElementIterator(document);
-        ElementIterator iterator = new ElementIterator(document);
-        Element element = iterator.current();
+//        Element element = iterator.current();
 
 
 //        System.out.println(tyData.replace("+    ", "\n").replace("'", ""));
-        System.out.println(mainData.replace(";", "\n"));
-
-        System.out.println(document.getText(element.getStartOffset(), element.getEndOffset()));
+//        System.out.println(mainData.replace(";", "\n"));
+//
+//        System.out.println(document.getText(element.getStartOffset(), element.getEndOffset()));
 
 //        System.out.println(element.get);
 
@@ -117,10 +115,76 @@ public class TyphoonData {
 //        System.out.println();
 //        System.out.println(htmlGetText(tyData));
 
-        System.out.println(wspMapWhole);
-        System.out.println(ptaMapEach);
-        System.out.println(ptaMapWhole);
+//        System.out.println(wspMapWhole);
+//        System.out.println(ptaMapEach);
+//        System.out.println(ptaMapWhole);
 
+    }
+
+    public static String getHtmlText(String html, String what) {
+        boolean inStr = false;
+        boolean inTag = false;
+        boolean hasAttribute = false;
+
+        char firstQuotation = 0;
+        int lastQuotation = -1;
+        int lastSpace = -1;
+        int tagStart = -1;
+
+        String tagName = "";
+
+        for (int i = 0; i < html.length(); i++) {
+            //字串開頭
+            if ((html.charAt(i) == '\'' || html.charAt(i) == '\"' || html.charAt(i) == '`') && !inStr && inTag) {//找到字串
+                firstQuotation = html.charAt(i);
+                lastQuotation = i;
+                //表示在字串裡
+                inStr = true;
+                continue;
+            }
+
+            //找到字串結束
+            if (html.charAt(i) == firstQuotation && inStr && inTag) {
+                //表示在字串外
+                inStr = false;
+
+//                if (lastQuotation > -1) {
+//                    System.out.println(html.substring(lastQuotation + 1, i));
+//                }
+
+                lastQuotation = i;
+            }
+
+            //find tag name, and find attribute (在tag裡找到空白 或是 沒有找到空白但找到結束)
+            if ((html.charAt(i) == ' ' || html.charAt(i) == '>') && inTag && !inStr) {
+                if (lastQuotation + 1 == i && hasAttribute) {
+                    System.out.println("Attribute: " + html.substring(lastSpace + 1, i));
+                    lastSpace = i;
+                }
+
+                if (!hasAttribute) {
+                    //是空白且還沒找到Attribute
+                    if (html.charAt(i) == ' ') {
+                        lastSpace = i;
+                        hasAttribute = true;
+                    }
+                    tagName = html.substring(tagStart + 1, i);
+                    System.out.println("tag name: " + tagName);
+                }
+            }
+
+            //html start
+            if (html.charAt(i) == '<' && !inStr && !inTag) {
+                tagStart = i;
+                inTag = true;
+            }
+
+            //html end
+            if (html.charAt(i) == '>' && !inStr && inTag) {
+                inTag = false;
+            }
+        }
+        return "";
     }
 
 

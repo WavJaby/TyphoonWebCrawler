@@ -64,10 +64,6 @@ public class test2 {
                     }
                     tagName = html.substring(tagStart + 1, i);
                     System.out.println("tag name: " + tagName);
-//                    if(tagName.equals("br")){
-//                        System.out.println("find: " + findingTag);
-//                        inTag = false;
-//                    }
                 }
             }
 

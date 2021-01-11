@@ -22,7 +22,7 @@ public class Main {
         System.out.println(typhoonData.typhoonID);
         System.out.println(typhoonData.typhoonName);
         System.out.println(typhoonData.typhoonTime);
-        System.out.println(typhoonData.typhoonPicture);
+//        System.out.println(typhoonData.typhoonPicture);
 
     }
 }
