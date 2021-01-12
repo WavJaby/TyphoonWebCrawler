@@ -6,6 +6,7 @@ import javax.swing.text.BadLocationException;
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -91,7 +92,7 @@ public class TyphoonData {
         //詳細資料
         String tyData2 = getJsValue(mainData, "TY_LIST_2['C']");
 
-        getHtmlText("<span class=\"aaa\">Hello</span>", null);
+        getHtmlText("<div class='aaa'><span class='bbb'>hello</span></div>", null);
 
 //        //解析HTML
 //        JEditorPane jEditorPane = new JEditorPane();
@@ -124,14 +125,18 @@ public class TyphoonData {
     public static String getHtmlText(String html, String what) {
         boolean inStr = false;
         boolean inTag = false;
+        boolean inEndTag = false;
         boolean hasAttribute = false;
 
         char firstQuotation = 0;
         int lastQuotation = -1;
         int lastSpace = -1;
-        int tagStart = -1;
+        int greaterPos = -1;
+        int startTagPos = -1;
+        int endTagPos = -1;
 
         String tagName = "";
+        int inTagCount = 0;
 
         for (int i = 0; i < html.length(); i++) {
             //字串開頭
@@ -147,19 +152,17 @@ public class TyphoonData {
             if (html.charAt(i) == firstQuotation && inStr && inTag) {
                 //表示在字串外
                 inStr = false;
-
-//                if (lastQuotation > -1) {
-//                    System.out.println(html.substring(lastQuotation + 1, i));
-//                }
-
                 lastQuotation = i;
             }
 
             //find tag name, and find attribute (在tag裡找到空白 或是 沒有找到空白但找到結束)
             if ((html.charAt(i) == ' ' || html.charAt(i) == '>') && inTag && !inStr) {
                 if (lastQuotation + 1 == i && hasAttribute) {
-                    System.out.println("Attribute: " + html.substring(lastSpace + 1, i));
+                    String[] attribute = html.substring(lastSpace + 1, i).split("=");
+                    System.out.println("Attribute: " + Arrays.toString(attribute));
                     lastSpace = i;
+                    if (startTagPos < 0)
+                        startTagPos = i;
                 }
 
                 if (!hasAttribute) {
@@ -168,22 +171,43 @@ public class TyphoonData {
                         lastSpace = i;
                         hasAttribute = true;
                     }
-                    tagName = html.substring(tagStart + 1, i);
+                    tagName = html.substring(greaterPos + 1, i);
                     System.out.println("tag name: " + tagName);
+
+//                    if (!tagName.equals("span")) {
+//                        inTagCount--;
+//                    }
                 }
             }
 
             //html start
+            if (html.charAt(i) == '/' && greaterPos + 1 == i && !inStr && inTag) {
+                inTagCount -= 2;
+                endTagPos = i - 1;
+                inEndTag = true;
+            }
+
+            //html start
             if (html.charAt(i) == '<' && !inStr && !inTag) {
-                tagStart = i;
+                greaterPos = i;
+                inTagCount++;
                 inTag = true;
             }
 
             //html end
             if (html.charAt(i) == '>' && !inStr && inTag) {
                 inTag = false;
+                hasAttribute = false;
+                System.out.println(inTagCount);
+                if (inEndTag && inTagCount == 0) {
+                    System.out.println("End tag: " + html.substring(endTagPos + 2, i));
+                    System.out.println(html.substring(startTagPos + 1, endTagPos));
+                }
+                inEndTag = false;
             }
         }
+
+
         return "";
     }
 
