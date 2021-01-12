@@ -6,10 +6,7 @@ import javax.swing.text.BadLocationException;
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class TyphoonData {
     public JSONObject typhoonName;
@@ -27,11 +24,11 @@ public class TyphoonData {
         //取得時間
         String dataTime = getJsValue(mainData, "TY_DataTime").replace("'", "");
         //取得info
-        JSONObject tyInfo = new JSONObject(getJsValue(mainData, "TYPHOON"));
+        JSONObject tyData = new JSONObject(getJsValue(mainData, "TYPHOON"));
         //颱風編號
-        typhoonID = tyInfo.names().get(0).toString();
+        typhoonID = tyData.names().get(0).toString();
         //颱風名字
-        typhoonName = (JSONObject) ((JSONObject) tyInfo.get(typhoonID)).get("Name");
+        typhoonName = (JSONObject) ((JSONObject) tyData.get(typhoonID)).get("Name");
         //時間
         typhoonTime = new JSONObject(getJsValue(mainData, "TY_TIME"));
 
@@ -88,11 +85,18 @@ public class TyphoonData {
 
         //颱風資料
         //簡介
-        String tyData1 = getJsValue(mainData, "TY_LIST_1['C']");
+        String tyData1 = getJsValue(mainData, "TY_LIST_1['C']")
+                .replace("  ", "").replace("'", "").replace("+", "");
         //詳細資料
-        String tyData2 = getJsValue(mainData, "TY_LIST_2['C']");
+        String tyData2 = getJsValue(mainData, "TY_LIST_2['C']")
+                .replace("  ", "").replace("'", "").replace("+", "");
 
-        getHtmlText("<div class='aaa'><span class='bbb'>hello</span></div>", null);
+        String tyInfo = getInnerHtml(tyData1, "class", "accordion-toggle");
+        String tyInformation = getInnerHtml(tyData1, "class", "panel-body");
+//        tyInfo = getHtmlText(tyInfo);
+//        tyInformation = getHtmlText(tyInformation);
+
+//        System.out.println(getHtmlText(tyInformation));
 
 //        //解析HTML
 //        JEditorPane jEditorPane = new JEditorPane();
@@ -122,11 +126,12 @@ public class TyphoonData {
 
     }
 
-    public static String getHtmlText(String html, String what) {
+    public static String getInnerHtml(String html, String type, String value) {
         boolean inStr = false;
         boolean inTag = false;
         boolean inEndTag = false;
         boolean hasAttribute = false;
+        boolean startFind = false;
 
         char firstQuotation = 0;
         int lastQuotation = -1;
@@ -137,6 +142,7 @@ public class TyphoonData {
 
         String tagName = "";
         int inTagCount = 0;
+        List<String[]> attributes = new ArrayList<>();
 
         for (int i = 0; i < html.length(); i++) {
             //字串開頭
@@ -159,10 +165,10 @@ public class TyphoonData {
             if ((html.charAt(i) == ' ' || html.charAt(i) == '>') && inTag && !inStr) {
                 if (lastQuotation + 1 == i && hasAttribute) {
                     String[] attribute = html.substring(lastSpace + 1, i).split("=");
-                    System.out.println("Attribute: " + Arrays.toString(attribute));
+                    attribute[1] = attribute[1].substring(1, attribute[1].length() - 1);
+                    attributes.add(attribute);
+
                     lastSpace = i;
-                    if (startTagPos < 0)
-                        startTagPos = i;
                 }
 
                 if (!hasAttribute) {
@@ -171,67 +177,244 @@ public class TyphoonData {
                         lastSpace = i;
                         hasAttribute = true;
                     }
-                    tagName = html.substring(greaterPos + 1, i);
-                    System.out.println("tag name: " + tagName);
-
-//                    if (!tagName.equals("span")) {
-//                        inTagCount--;
-//                    }
+                    if (!inEndTag) {
+                        tagName = html.substring(greaterPos + 1, i);
+                    }
                 }
             }
 
             //html start
             if (html.charAt(i) == '/' && greaterPos + 1 == i && !inStr && inTag) {
-                inTagCount -= 2;
+                if (startFind) inTagCount -= 2;
                 endTagPos = i - 1;
                 inEndTag = true;
             }
 
             //html start
             if (html.charAt(i) == '<' && !inStr && !inTag) {
+                if (startFind) inTagCount++;
                 greaterPos = i;
-                inTagCount++;
                 inTag = true;
             }
 
             //html end
             if (html.charAt(i) == '>' && !inStr && inTag) {
-                inTag = false;
-                hasAttribute = false;
-                System.out.println(inTagCount);
-                if (inEndTag && inTagCount == 0) {
-                    System.out.println("End tag: " + html.substring(endTagPos + 2, i));
-                    System.out.println(html.substring(startTagPos + 1, endTagPos));
+                if (hasAttribute(attributes, type, value) && !inEndTag && hasAttribute) {
+                    startFind = true;
+                    startTagPos = i;
+                    inTagCount = 1;
                 }
+
+                if ((tagName.equals("br")) && !inEndTag) {
+                    inTagCount--;
+                }
+
+                if (inEndTag && inTagCount == 0 && startFind) {
+                    System.out.println(html.substring(startTagPos + 1, endTagPos));
+                    startFind = false;
+                }
+
+//                if (!inEndTag) {
+//                    System.out.println("tag name: " + tagName);
+//                    if (hasAttribute)
+//                        System.out.println("Attribute: " + Arrays.toString(attribute));
+//                    System.out.println("Finding: " + startFind);
+//                    System.out.println(inTagCount);
+//                }
+
+                inTag = false;
                 inEndTag = false;
+                hasAttribute = false;
+                attributes.clear();
             }
         }
-
 
         return "";
     }
 
+    private static boolean hasAttribute(List<String[]> list, String type, String value) {
+        for (String[] i : list) {
+            if (i[0].equals(type) && i[1].equals(value))
+                return true;
+        }
+        return false;
+    }
 
-    public static String htmlGetText(String input) {
-        int lastIndex = -1;
-        int index = 0;
-        int lastOne = input.lastIndexOf(">");
-        StringBuilder stringBuilder = new StringBuilder();
-        while (index != lastOne) {
-            index = input.indexOf(">", lastIndex);
-            char ch = input.charAt(index + 1);
-//            System.out.println(lastIndex);
-//            System.out.println(index);
-            if (ch != '\'' && ch != '\"' && ch != '+' && ch != '>') {
-                stringBuilder.append(input.substring(index + 1, input.indexOf("<", index)));
-//                System.out.println(stringBuilder.toString());
+    public static String getHtmlText(String html) {
+        StringBuilder builder = new StringBuilder();
+
+        boolean inStr = false;
+        boolean inTag = false;
+
+        char firstQuotation = 0;
+        int greaterStart = -1;
+        int greaterEnd = -1;
+
+        for (int i = 0; i < html.length(); i++) {
+            //字串開頭
+            if ((html.charAt(i) == '\'' || html.charAt(i) == '\"' || html.charAt(i) == '`') && !inStr && inTag) {//找到字串
+                firstQuotation = html.charAt(i);
+                //表示在字串裡
+                inStr = true;
+                continue;
             }
 
-            lastIndex = index + 1;
-        }
+            //找到字串結束
+            if (html.charAt(i) == firstQuotation && inStr && inTag) {
+                //表示在字串外
+                inStr = false;
+            }
 
-        return stringBuilder.toString();
+            //html start
+            if (html.charAt(i) == '<' && !inStr && !inTag) {
+                if (greaterStart + 1 != i) {
+                    if (greaterStart == -1) {
+                        builder.append(html, 0, i);
+                    }
+                    if (greaterStart > -1) {
+                        builder.append(html, greaterStart + 1, i);
+                    }
+                }
+                inTag = true;
+            }
+            //html end
+            if (html.charAt(i) == '>' && !inStr && inTag) {
+                greaterStart = i;
+                inTag = false;
+            }
+        }
+        builder.append(html, greaterStart + 1, html.length());
+
+        return builder.toString();
     }
+
+//    public static String getHtmlText(String html, String what) {
+//        boolean inStr = false;
+//        boolean inTag = false;
+//        boolean inEndTag = false;
+//        boolean hasAttribute = false;
+//        boolean startFind = false;
+//
+//        char firstQuotation = 0;
+//        int lastQuotation = -1;
+//        int lastSpace = -1;
+//        int greaterPos = -1;
+//        int startTagPos = -1;
+//        int endTagPos = -1;
+//
+//        String tagName = "";
+//        String[] attribute = new String[2];
+//        int inTagCount = 0;
+//
+//        for (int i = 0; i < html.length(); i++) {
+//            //字串開頭
+//            if ((html.charAt(i) == '\'' || html.charAt(i) == '\"' || html.charAt(i) == '`') && !inStr && inTag) {//找到字串
+//                firstQuotation = html.charAt(i);
+//                lastQuotation = i;
+//                //表示在字串裡
+//                inStr = true;
+//                continue;
+//            }
+//
+//            //找到字串結束
+//            if (html.charAt(i) == firstQuotation && inStr && inTag) {
+//                //表示在字串外
+//                inStr = false;
+//                lastQuotation = i;
+//            }
+//
+//            //find tag name, and find attribute (在tag裡找到空白 或是 沒有找到空白但找到結束)
+//            if ((html.charAt(i) == ' ' || html.charAt(i) == '>') && inTag && !inStr) {
+//                if (lastQuotation + 1 == i && hasAttribute) {
+//                    attribute = html.substring(lastSpace + 1, i).split("=");
+//                    lastSpace = i;
+//                    if (startTagPos < 0)
+//                        startTagPos = i;
+//                }
+//
+//                if (!hasAttribute) {
+//                    //是空白且還沒找到Attribute
+//                    if (html.charAt(i) == ' ') {
+//                        lastSpace = i;
+//                        hasAttribute = true;
+//                    }
+//                    if (!inEndTag) {
+//                        tagName = html.substring(greaterPos + 1, i);
+//                    }
+////                    if (!tagName.equals("span")) {
+////                        inTagCount--;
+////                    }
+//                }
+//            }
+//
+//            //html start
+//            if (html.charAt(i) == '/' && greaterPos + 1 == i && !inStr && inTag) {
+//                inTagCount -= 2;
+//                endTagPos = i - 1;
+//                inEndTag = true;
+//            }
+//
+//            //html start
+//            if (html.charAt(i) == '<' && !inStr && !inTag) {
+//                greaterPos = i;
+//                inTagCount++;
+//                inTag = true;
+//            }
+//
+//            //html end
+//            if (html.charAt(i) == '>' && !inStr && inTag) {
+//                inTag = false;
+//                hasAttribute = false;
+//
+//                if ((tagName.equals("br") || tagName.equals("a")) && !inEndTag) {
+//                    inTagCount--;
+//                }
+//
+//                if (attribute[1].equals("document") && !inEndTag) {
+//                    startFind = true;
+//                }
+//
+//                if (inEndTag && inTagCount == 0 && startFind) {
+//                    System.out.println("End tag: " + html.substring(endTagPos + 2, i));
+//                    System.out.println(html.substring(startTagPos + 1, endTagPos));
+//                    startFind = false;
+//                }
+//
+//                if (!inEndTag) {
+//                    System.out.println("tag name: " + tagName);
+//                    System.out.println("Attribute: " + Arrays.toString(attribute));
+//                    System.out.println("Finding: " + startFind);
+//                    System.out.println(inTagCount);
+//                }
+//
+//                inEndTag = false;
+//            }
+//        }
+//
+//
+//        return "";
+//    }
+
+//    public static String getHtmlText(String input) {
+//        int lastIndex = -1;
+//        int index = 0;
+//        int lastOne = input.lastIndexOf(">");
+//        StringBuilder stringBuilder = new StringBuilder();
+//        while (index != lastOne) {
+//            index = input.indexOf(">", lastIndex);
+//            char ch = input.charAt(index + 1);
+////            System.out.println(lastIndex);
+////            System.out.println(index);
+//            if (ch != '\'' && ch != '\"' && ch != '+' && ch != '>') {
+//                stringBuilder.append(input.substring(index + 1, input.indexOf("<", index)));
+////                System.out.println(stringBuilder.toString());
+//            }
+//
+//            lastIndex = index + 1;
+//        }
+//
+//        return stringBuilder.toString();
+//    }
 
     public static String byteToBase64(byte[] input) {
         return new String(Base64.getEncoder().encode(input));
