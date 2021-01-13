@@ -12,6 +12,7 @@ public class TyphoonData {
     public JSONObject typhoonName;
     public JSONObject typhoonTime;
     public JSONObject typhoonPicture;
+    public JSONObject typhoonInfo;
     public String typhoonID;
 
     //TODO:指測試過單個颱風，一次多個需要修改
@@ -82,22 +83,33 @@ public class TyphoonData {
         typhoonPicture = new JSONObject();
         typhoonPicture.put(typhoonID, allPicture);
 
-
+        typhoonInfo = new JSONObject();
         //颱風資料
-        //簡介
-        String tyData1 = getJsValue(mainData, "TY_LIST_1['C']")
-                .replace("  ", "").replace("'", "").replace("+", "");
-        //詳細資料
-        String tyData2 = getJsValue(mainData, "TY_LIST_2['C']")
-                .replace("  ", "").replace("'", "").replace("+", "");
+        String[] language = new String[]{"C", "E"};
+        for (String i : language) {
+            JSONObject jsonCache = new JSONObject();
+            //簡介
+            String tyDataInfo = getJsValue(mainData, "TY_LIST_1['" + i + "']")
+                    .replace("  ", "").replace("'", "").replace("+", "");
+            //詳細資料
+            String tyDataDetailed = getJsValue(mainData, "TY_LIST_2['" + i + "']")
+                    .replace("  ", "").replace("'", "").replace("+", "");
 
-        String tyInfo = getInnerHtml(tyData1, "class", "accordion-toggle");
-        String tyInformation = getInnerHtml(tyData1, "class", "panel-body");
-//        tyInfo = getHtmlText(tyInfo);
-//        tyInformation = getHtmlText(tyInformation);
+            //颱風資料
+            String tyInfo = getInnerHtml(tyDataInfo, "class", "accordion-toggle", ",");
+            String tyInformation = getInnerHtml(tyDataInfo, "class", "panel-body", ",");
+            //颱風預測
+            String prediction = getInnerHtml(tyDataDetailed, "class", "typ-path", ",");
 
-//        System.out.println(getHtmlText(tyInformation));
+            tyInfo = getHtmlText(tyInfo);
+            tyInformation = getHtmlText(tyInformation);
+            prediction = getHtmlText(prediction);
 
+            jsonCache.put("info", tyInfo);
+            jsonCache.put("detailed", tyInformation);
+            jsonCache.put("prediction", prediction);
+            typhoonInfo.put(i, jsonCache);
+        }
 //        //解析HTML
 //        JEditorPane jEditorPane = new JEditorPane();
 //        jEditorPane.setContentType("text/html; charset=utf-8");
@@ -126,12 +138,13 @@ public class TyphoonData {
 
     }
 
-    public static String getInnerHtml(String html, String type, String value) {
+    public static String getInnerHtml(String html, String type, String value, String split) {
         boolean inStr = false;
         boolean inTag = false;
         boolean inEndTag = false;
         boolean hasAttribute = false;
         boolean startFind = false;
+        boolean hasThings = false;
 
         char firstQuotation = 0;
         int lastQuotation = -1;
@@ -143,6 +156,7 @@ public class TyphoonData {
         String tagName = "";
         int inTagCount = 0;
         List<String[]> attributes = new ArrayList<>();
+        StringBuilder builder = new StringBuilder();
 
         for (int i = 0; i < html.length(); i++) {
             //字串開頭
@@ -210,8 +224,12 @@ public class TyphoonData {
                 }
 
                 if (inEndTag && inTagCount == 0 && startFind) {
-                    System.out.println(html.substring(startTagPos + 1, endTagPos));
                     startFind = false;
+                    if (hasThings) {
+                        builder.append(split);
+                    }
+                    builder.append(html, startTagPos + 1, endTagPos);
+                    hasThings = true;
                 }
 
 //                if (!inEndTag) {
@@ -229,7 +247,7 @@ public class TyphoonData {
             }
         }
 
-        return "";
+        return builder.toString();
     }
 
     private static boolean hasAttribute(List<String[]> list, String type, String value) {
@@ -270,9 +288,11 @@ public class TyphoonData {
                 if (greaterStart + 1 != i) {
                     if (greaterStart == -1) {
                         builder.append(html, 0, i);
+                        builder.append("|");
                     }
                     if (greaterStart > -1) {
                         builder.append(html, greaterStart + 1, i);
+                        builder.append("|");
                     }
                 }
                 inTag = true;
